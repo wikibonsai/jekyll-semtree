@@ -70,6 +70,10 @@ module Jekyll
         if tree_hash.empty?
           Jekyll.logger.error("Jekyll-SemTree: No trunk (index docs) detected.")
         end
+        if root_doc.nil? || index_docs.empty? || tree_hash.empty?
+          Jekyll.logger.error("Jekyll-SemTree: Unable to build semantic tree.")
+          return
+        end
         # build tree
         @site.tree = Tree.new(tree_hash, root_doc, option_virtual_trunk)
 
