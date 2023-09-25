@@ -1,35 +1,144 @@
-# Jekyll::Id
+# Jekyll::SemTree
 
-Welcome to your new gem! In this directory, you'll find the files you need to be able to package up your Ruby library into a gem. Put your Ruby code in the file `lib/jekyll/id`. To experiment with that code, run `bin/console` for an interactive prompt.
+[![A WikiBonsai Project](https://img.shields.io/badge/%F0%9F%8E%8B-A%20WikiBonsai%20Project-brightgreen)](https://github.com/wikibonsai/wikibonsai)
+[![Ruby Gem](https://img.shields.io/gem/v/jekyll-semtree)](https://rubygems.org/gems/jekyll-semtree)
 
-TODO: Delete this and the text above, and describe your gem
+⚠️ This is gem is under active development! ⚠️
+
+⚠️ Expect breaking changes and surprises until otherwise noted (likely by v0.1.0 or v1.0.0). ⚠️
+
+Jekyll-SemTree adds the ability to build a (semantic) tree from one of the jekyll collection types (default is `index`). Frontmatter metadata is added to each linked document so that they may be referenced by the relationships in the tree. (For example, on a page it may be desirable to link to all `children` of the current page or to build a breadcrumb trail from the current page's `ancestors`.)
+
+This gem works in conjunction with [`jekyll-graph`](https://github.com/wikibonsai/jekyll-graph).
+
+🌳 Cultivate a "semantic tree" or "knowledge bonsai" in your [🎋 WikiBonsai](https://github.com/wikibonsai/wikibonsai) digital garden.
+
+⚠️ May conflict with [`jekyll-namespaces`](htpps://github.com/manunamz/jekyll-namespaces) -- please only run one with your jekyll blog.
 
 ## Installation
 
-Add this line to your application's Gemfile:
+Follow the instructions for installing a [jekyll plugin](https://jekyllrb.com/docs/plugins/installation/) for `jekyll-namespaces`.
 
-```ruby
-gem 'jekyll-id'
+## Configuration
+
+Defaults look like this:
+
+```yaml
+semtree:
+  doctype: 'index'
+  enabled: true
+  page: 'map'
+  root: 'i.bonsai'
+  virtual_trunk: false
 ```
 
-And then execute:
+`doctype`: Sets the doctype/collection-type for the trunk of the semantic tree.
 
-    $ bundle install
+`enabled`: Toggles the plugin on or off.
 
-Or install it yourself as:
+`root`: Sets the filename of the root document for the semantic tree.
 
-    $ gem install jekyll-id
+`page`: Which jekyll page to append tree to. A `nodes` metadata will be padded to that page, which will be accessible via its liquid template. Each node has the form `{ text => string, url => string, ancestors => string[], children => string[] }`.
+
+`virtual_trunk`: Whether or not to include the `index` collection documents in the generation of the semantic tree.
 
 ## Usage
 
-TODO: Write usage instructions here
+The semantic tree is defined by files in the `index` collection. They may include yaml frontmatter and the only content should be a markdown outline of [wikirefs](https://github.com/wikibonsai/wikirefs). Be sure to use the same kind of indentation and indentation size for each level:
 
-## Development
+```markdown
+// i.bonsai.md
 
-After checking out the repo, run `bin/setup` to install dependencies. Then, run `rake spec` to run the tests. You can also run `bin/console` for an interactive prompt that will allow you to experiment.
+---
+title: Knowledge Bonsai
+---
 
-To install this gem onto your local machine, run `bundle exec rake install`. To release a new version, update the version number in `version.rb`, and then run `bundle exec rake release`, which will create a git tag for the version, push git commits and the created tag, and push the `.gem` file to [rubygems.org](https://rubygems.org).
+- [[jekyll-wikibonsai]]
+  - [[test]]
+  - [[feedback]]
+  - [[plugin]]
+    - [[jekyll-graph]]
+    - [[jekyll-semtree]]
+    - [[jekyll-wikirefs]]
 
-## Contributing
+// ...
+```
 
-Bug reports and pull requests are welcome on GitHub at https://github.com/[USERNAME]/jekyll-id.
+Which will create a tree that looks like:
+
+```mermaid
+graph TD;
+  jekyll-wikibonsai-->test;
+  jekyll-wikibonsai-->feedback;
+  jekyll-wikibonsai-->plugin;
+  plugin-->jekyll-graph;
+  plugin-->jekyll-semtree;
+  plugin-->jekyll-wikirefs;
+```
+
+If broken up over multiple index files, it might look something like this:
+
+```markdown
+// i.bonsai.md
+
+---
+title: Knowledge Bonsai
+---
+
+- [[jekyll-wikibonsai]]
+  - [[test]]
+  - [[feedback]]
+  - [[i.plugin]]
+
+// ...
+
+// i.plugin
+
+---
+title: Notable Plugins
+---
+
+- [[jekyll-graph]]
+- [[jekyll-semtree]]
+- [[jekyll-wikirefs]]
+
+```
+
+Which will create a tree that looks like:
+
+```mermaid
+graph TD;
+  jekyll-wikibonsai-->test;
+  jekyll-wikibonsai-->feedback;
+  jekyll-wikibonsai-->i.plugin;
+  i.plugin-->jekyll-graph;
+  i.plugin-->jekyll-semtree;
+  i.plugin-->jekyll-wikirefs;
+```
+
+### Metadata
+
+`ancestors`: This is appended to each document in the tree. It contains a list of url strings for documents along the path from the root document to the current document in the tree.
+
+`nodes`: This is appended to the `page` defined in the [config](#configuration), which is meant to render the tree.
+
+`children`: This is appended to each document in the tree. It contains a list of url strings of all immediate children of the current document.
+
+The document for the url can be retrieved in liquid templates like so:
+
+```html
+<!-- print all ancestors as links with the document title as its innertext -->
+
+{% for ancestor_url in page.ancestors %}
+    {% assign ancestor_doc = site.documents | where: "url", ancestor_url | first %}
+    <a href="{{ ancestor_doc.url }}">{{ ancestor_doc.title }}</a>
+{% endfor %}
+```
+```html
+<!-- print all children as links with the document title as its innertext -->
+
+{% for child_url in page.children %}
+    {% assign child_doc = site.documents | where: "url", child_url | first %}
+    <a href="{{ child_doc.url }}">{{ child_doc.title }}</a>
+{% endfor %}
+```
